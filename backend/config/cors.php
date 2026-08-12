@@ -19,7 +19,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => array_filter([
+        env('FRONTEND_URL', 'http://localhost:5173'),
+        'https://amar-assist.site',
+        'https://www.amar-assist.site',
+        'http://localhost:8000',
+    ]),
 
     'allowed_origins_patterns' => [],
 
