@@ -1,0 +1,16 @@
+# Ambiente Docker
+.env
+
+# Dependências
+/backend/vendor
+/frontend/node_modules
+
+# Build do front-end
+/frontend/dist
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.swp

@@ -1,0 +1,105 @@
+name: amar-assist
+
+services:
+  # ---------------------------------------------------------------------------
+  # PHP-FPM: executa a aplicação Laravel 9
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: amar-assist/php:8.1
+    container_name: amarassist_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - amarassist
+
+  # ---------------------------------------------------------------------------
+  # Nginx: servidor web / proxy para o PHP-FPM
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: amarassist_nginx
+    restart: unless-stopped
+    ports:
+      - "${APP_HOST_PORT:-8000}:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - amarassist
+
+  # ---------------------------------------------------------------------------
+  # MySQL 8
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: amarassist_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-amar_assist}
+      MYSQL_USER: ${MYSQL_USER:-amar}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+    ports:
+      # 3307 no host para não conflitar com um MySQL já instalado na máquina
+      - "${MYSQL_HOST_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - amarassist
+
+  # ---------------------------------------------------------------------------
+  # Redis: cache da aplicação + backend das filas
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: amarassist_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_AUTH:-redissecret}
+    ports:
+      # 6381 no host para não conflitar com Redis já em execução
+      - "${REDIS_HOST_PORT:-6381}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_AUTH:-redissecret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - amarassist
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  amarassist:
+    driver: bridge
