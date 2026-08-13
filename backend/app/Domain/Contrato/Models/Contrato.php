@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Contrato\Models;
 
 use App\Domain\Cliente\Models\Cliente;
+use App\Domain\Cobranca\Models\Cobranca;
 use App\Domain\Contrato\Enums\SituacaoContrato;
 use App\Domain\Contrato\Enums\TipoContrato;
 use Carbon\CarbonInterface;
@@ -12,6 +13,7 @@ use Database\Factories\ContratoFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
@@ -56,6 +58,11 @@ class Contrato extends Model
     public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);
+    }
+
+    public function cobrancas(): HasMany
+    {
+        return $this->hasMany(Cobranca::class);
     }
 
     public function vencimentoPara(CarbonInterface $mes): Carbon

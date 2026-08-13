@@ -53,6 +53,11 @@ class ContratoController extends Controller
         return parent::destroy($request);
     }
 
+    public function checkDelete(string $id): JsonResponse
+    {
+        return parent::checkDelete($id);
+    }
+
     public function suspender(string $id): JsonResponse
     {
         try {
