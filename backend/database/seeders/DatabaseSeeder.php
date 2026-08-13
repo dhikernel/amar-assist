@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ClienteSeeder::class,
             ContratoSeeder::class,
+            CobrancaSeeder::class,
         ]);
     }
 }

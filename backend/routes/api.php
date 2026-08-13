@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Cliente\Controllers\ClienteController;
+use App\Domain\Cobranca\Controllers\CobrancaController;
 use App\Domain\Contrato\Controllers\ContratoController;
 use Illuminate\Support\Facades\Route;
 
@@ -36,4 +37,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/contratos/{id}/suspender', [ContratoController::class, 'suspender']);
     Route::patch('/contratos/{id}/reativar', [ContratoController::class, 'reativar']);
     Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
+
+    Route::get('/cobrancas', [CobrancaController::class, 'index']);
+    Route::post('/cobrancas', [CobrancaController::class, 'store']);
+    Route::get('/cobrancas/{id}', [CobrancaController::class, 'show']);
+    Route::put('/cobrancas/{id}', [CobrancaController::class, 'update']);
+    Route::delete('/cobrancas', [CobrancaController::class, 'destroy']);
 });
