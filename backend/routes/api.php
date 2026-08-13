@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Cliente\Controllers\ClienteController;
+use App\Domain\Contrato\Controllers\ContratoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => response()->json([
@@ -26,4 +27,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/clientes/{id}/check-delete', [ClienteController::class, 'checkDelete']);
     Route::patch('/clientes/{id}/inactive', [ClienteController::class, 'inactive']);
     Route::patch('/clientes/{id}/active', [ClienteController::class, 'active']);
+
+    Route::get('/contratos', [ContratoController::class, 'index']);
+    Route::post('/contratos', [ContratoController::class, 'store']);
+    Route::get('/contratos/{id}', [ContratoController::class, 'show']);
+    Route::put('/contratos/{id}', [ContratoController::class, 'update']);
+    Route::delete('/contratos', [ContratoController::class, 'destroy']);
 });
