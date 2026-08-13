@@ -28,6 +28,7 @@ use OpenApi\Annotations as OA;
  *
  * @OA\Tag(name="Auth", description="Autenticação")
  * @OA\Tag(name="Clientes", description="Cadastro de clientes")
+ * @OA\Tag(name="Contratos", description="Contratos e ciclo de vencimento")
  *
  * ------- AUTH -------
  *
@@ -270,6 +271,192 @@ use OpenApi\Annotations as OA;
  *
  *   @OA\Response(response=204, description="Cliente removido"),
  *   @OA\Response(response=404, description="Cliente não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * ------- CONTRATOS -------
+ *
+ * @OA\Get(
+ *   path="/api/contratos", tags={"Contratos"}, summary="Lista contratos",
+ *   description="Cada item traz o proximo_vencimento já resolvido pela diretiva (b): o ciclo é limitado ao último dia do mês corrente.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="filter[numero]", in="query", description="Busca parcial pelo número", @OA\Schema(type="string")),
+ *   @OA\Parameter(name="filter[situacao]", in="query", @OA\Schema(type="string", enum={"ativo","suspenso","encerrado"})),
+ *   @OA\Parameter(name="filter[tipo]", in="query", @OA\Schema(type="string", enum={"PF","PJ"})),
+ *   @OA\Parameter(name="filter[cliente_id]", in="query", @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="filter[cliente]", in="query", description="Busca parcial pelo nome do cliente", @OA\Schema(type="string")),
+ *   @OA\Parameter(name="sort", in="query", description="numero, data_inicio, valor_mensal, situacao, created_at (prefixe com - para descendente)", @OA\Schema(type="string")),
+ *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Lista paginada de contratos",
+ *
+ *     @OA\JsonContent(type="object",
+ *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Contrato")),
+ *       @OA\Property(property="current_page", type="integer"),
+ *       @OA\Property(property="per_page", type="integer"),
+ *       @OA\Property(property="total", type="integer")
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=400, description="Filtro ou ordenação não permitidos"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Post(
+ *   path="/api/contratos", tags={"Contratos"}, summary="Cadastra um contrato",
+ *   description="O tipo (PF/PJ) é derivado do documento do cliente e não é aceito na requisição. O ciclo é o dia do mês pretendido para o vencimento (1 a 31); o dia real é resolvido a cada mês. Cliente inativo não pode receber contrato.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={
+ *         "cliente_id": 1,
+ *         "numero": "CT-000123",
+ *         "ciclo": 31,
+ *         "valor_mensal": 249.90,
+ *         "data_inicio": "2027-01-05"
+ *       })
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=201, description="Contrato cadastrado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Contrato")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Dados inválidos, número duplicado ou cliente inativo",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Get(
+ *   path="/api/contratos/{id}", tags={"Contratos"}, summary="Exibe um contrato",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Contrato encontrado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Contrato")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Put(
+ *   path="/api/contratos/{id}", tags={"Contratos"}, summary="Atualiza um contrato",
+ *   description="Atualização parcial. Trocar o cliente recalcula o tipo. A situação não é aceita aqui — use os endpoints de suspender, reativar ou encerrar.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={"ciclo": 20, "valor_mensal": 299.90})
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=200, description="Contrato atualizado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Contrato")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Dados inválidos ou número já usado por outro contrato",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Patch(
+ *   path="/api/contratos/{id}/suspender", tags={"Contratos"}, summary="Suspende um contrato",
+ *   description="Contrato encerrado não pode ser suspenso — encerrado é estado terminal.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Contrato suspenso",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Contrato")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Transição não permitida",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Patch(
+ *   path="/api/contratos/{id}/reativar", tags={"Contratos"}, summary="Reativa um contrato",
+ *   description="Volta o contrato para ativo. Contrato encerrado não pode ser reativado.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Contrato reativado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Contrato")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Transição não permitida",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Patch(
+ *   path="/api/contratos/{id}/encerrar", tags={"Contratos"}, summary="Encerra um contrato",
+ *   description="Grava a data_fim com a data corrente. Estado terminal: não é possível encerrar de novo, suspender nem reativar depois.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Contrato encerrado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Contrato")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Contrato já está encerrado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Delete(
+ *   path="/api/contratos", tags={"Contratos"}, summary="Remove um contrato",
+ *   description="Remoção lógica (soft delete). O id vai no corpo, no campo uuid.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={"uuid": 1})
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=204, description="Contrato removido"),
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
  *   @OA\Response(response=401, description="Não autenticado")
  * )
  */
