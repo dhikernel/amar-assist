@@ -29,6 +29,7 @@ use OpenApi\Annotations as OA;
  * @OA\Tag(name="Auth", description="Autenticação")
  * @OA\Tag(name="Clientes", description="Cadastro de clientes")
  * @OA\Tag(name="Contratos", description="Contratos e ciclo de vencimento")
+ * @OA\Tag(name="Cobranças", description="Faturas, acréscimo por atraso e pagamento")
  *
  * ------- AUTH -------
  *
@@ -457,6 +458,169 @@ use OpenApi\Annotations as OA;
  *
  *   @OA\Response(response=204, description="Contrato removido"),
  *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Get(
+ *   path="/api/contratos/{id}/check-delete", tags={"Contratos"}, summary="Verifica vínculos do contrato",
+ *   description="Devolve quantas cobranças o contrato possui.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Quantidade de cobranças vinculadas",
+ *
+ *     @OA\JsonContent(type="object",
+ *       @OA\Property(property="count", type="integer", example=3),
+ *       @OA\Property(property="haveRelationship", type="boolean", example=true)
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Contrato não encontrado"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * ------- COBRANÇAS -------
+ *
+ * @OA\Get(
+ *   path="/api/cobrancas", tags={"Cobranças"}, summary="Lista cobranças",
+ *   description="Ordenação exigida pelo enunciado: as faturas em aberto e em atraso vêm primeiro, da mais antiga para a mais recente; depois as em aberto a vencer; as pagas ficam sempre por último, mesmo que tenham vencido antes. Os acréscimos de cada item são recalculados na consulta, conforme a diretiva (c).",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="filter[situacao]", in="query", @OA\Schema(type="string", enum={"aberta","paga"})),
+ *   @OA\Parameter(name="filter[tipo]", in="query", @OA\Schema(type="string", enum={"boleto","cartao","pix"})),
+ *   @OA\Parameter(name="filter[em_atraso]", in="query", description="1 para listar apenas as vencidas e em aberto", @OA\Schema(type="boolean")),
+ *   @OA\Parameter(name="filter[contrato_id]", in="query", @OA\Schema(type="integer")),
+ *   @OA\Parameter(name="filter[cliente]", in="query", description="Busca parcial pelo nome do cliente", @OA\Schema(type="string")),
+ *   @OA\Parameter(name="per_page", in="query", @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Lista paginada de cobranças",
+ *
+ *     @OA\JsonContent(type="object",
+ *       @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Cobranca")),
+ *       @OA\Property(property="current_page", type="integer"),
+ *       @OA\Property(property="per_page", type="integer"),
+ *       @OA\Property(property="total", type="integer")
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=400, description="Filtro ou ordenação não permitidos"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Post(
+ *   path="/api/cobrancas", tags={"Cobranças"}, summary="Gera uma cobrança",
+ *   description="A data de vencimento vem do ciclo do contrato (diretiva b) e não é aceita na requisição. O valor original cai para o valor mensal do contrato quando omitido. Se a competência informada já estiver vencida, os acréscimos da diretiva (c) já entram na geração. Somente contrato ativo gera cobrança, e não é possível repetir a competência do mesmo contrato. Os campos do detalhe são exigidos conforme o tipo: boleto pede codigo_barras; cartao pede bandeira, titular, numero e validade; pix pede tipo_chave e chave. O CVV não é aceito em nenhuma hipótese, e o número do cartão é gravado criptografado.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={
+ *         "contrato_id": 1,
+ *         "competencia": "2027-02",
+ *         "tipo": "pix",
+ *         "pix_tipo_chave": "email",
+ *         "pix_chave": "financeiro@amarassist.com.br"
+ *       })
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=201, description="Cobrança gerada",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Cobranca")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Dados inválidos, competência repetida ou contrato não ativo",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Get(
+ *   path="/api/cobrancas/{id}", tags={"Cobranças"}, summary="Exibe uma cobrança",
+ *   description="Enquanto aberta, os acréscimos são recalculados a cada consulta — o valor cresce 1% ao dia de atraso.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Cobrança encontrada",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Cobranca")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Cobrança não encontrada"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Put(
+ *   path="/api/cobrancas/{id}", tags={"Cobranças"}, summary="Atualiza uma cobrança",
+ *   description="Aceita valor_original e data_vencimento; os acréscimos são recalculados na sequência. Cobrança paga não pode ser alterada.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={"valor_original": 299.90})
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=200, description="Cobrança atualizada",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Cobranca")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Dados inválidos ou cobrança já paga",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Cobrança não encontrada"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Patch(
+ *   path="/api/cobrancas/{id}/pagar", tags={"Cobranças"}, summary="Registra o pagamento",
+ *   description="Congela os acréscimos no valor apurado no dia do pagamento: a partir daí a fatura para de crescer, e a consulta passa a devolver o valor efetivamente pago, e não um recálculo.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+ *
+ *   @OA\Response(response=200, description="Pagamento registrado",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/Cobranca")
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Cobrança já paga",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ValidationError")
+ *   ),
+ *
+ *   @OA\Response(response=404, description="Cobrança não encontrada"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Delete(
+ *   path="/api/cobrancas", tags={"Cobranças"}, summary="Remove uma cobrança",
+ *   description="Remoção lógica (soft delete). O id vai no corpo, no campo uuid.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={"uuid": 1})
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=204, description="Cobrança removida"),
+ *   @OA\Response(response=404, description="Cobrança não encontrada"),
  *   @OA\Response(response=401, description="Não autenticado")
  * )
  */

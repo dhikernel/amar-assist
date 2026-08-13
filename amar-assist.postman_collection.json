@@ -36,6 +36,10 @@
       "value": ""
     },
     {
+      "key": "cobranca_id",
+      "value": ""
+    },
+    {
       "key": "cpf",
       "value": "111.444.777-35"
     },
@@ -1104,6 +1108,395 @@
               "path": [
                 "api",
                 "contratos"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cobrancas",
+      "item": [
+        {
+          "name": "Selecionar Contrato Ativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.data && jsonResponse.data.length > 0) {",
+                  "    pm.globals.set(\"contrato_id\", jsonResponse.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos?filter[situacao]=ativo&per_page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ],
+              "query": [
+                {
+                  "key": "filter[situacao]",
+                  "value": "ativo"
+                },
+                {
+                  "key": "per_page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Guarda um contrato ativo em contrato_id. Necessário porque a pasta Contratos termina encerrando e removendo o contrato que havia capturado, e só contrato ativo gera cobrança."
+          }
+        },
+        {
+          "name": "Listar Cobrancas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.data && jsonResponse.data.length > 0) {",
+                  "    pm.globals.set(\"cobranca_id\", jsonResponse.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas?filter[situacao]=&filter[tipo]=&filter[em_atraso]=&filter[cliente]=&per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
+              ],
+              "query": [
+                {
+                  "key": "filter[situacao]",
+                  "value": "",
+                  "description": "aberta ou paga",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[tipo]",
+                  "value": "",
+                  "description": "boleto, cartao ou pix",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[em_atraso]",
+                  "value": "",
+                  "description": "1 para listar apenas as vencidas e em aberto",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[cliente]",
+                  "value": "",
+                  "description": "Busca parcial pelo nome do cliente",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Esta é a tela de cobrança do enunciado. A ordem é fixa: em aberto e em atraso primeiro, da mais antiga para a mais recente; depois as em aberto a vencer; as pagas sempre ao final, mesmo tendo vencido antes. Os valores de multa e juros são recalculados na consulta."
+          }
+        },
+        {
+          "name": "Listar - Apenas em Atraso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas?filter[em_atraso]=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
+              ],
+              "query": [
+                {
+                  "key": "filter[em_atraso]",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Confira dias_atraso, valor_juros e valor_total: o juros é 1% do valor original por dia de atraso."
+          }
+        },
+        {
+          "name": "Gerar Cobranca - Boleto",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.id) {",
+                  "    pm.globals.set(\"cobranca_id\", jsonResponse.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrato_id\": {{contrato_id}},\n  \"competencia\": \"2027-02\",\n  \"tipo\": \"boleto\",\n  \"codigo_barras\": \"11111111111111111111111111111111111111111111\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
+              ]
+            },
+            "description": "A data de vencimento não é enviada: sai do ciclo do contrato pela diretiva (b). O valor original cai para o valor mensal do contrato quando omitido."
+          }
+        },
+        {
+          "name": "Gerar Cobranca - Pix",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrato_id\": {{contrato_id}},\n  \"competencia\": \"2027-03\",\n  \"tipo\": \"pix\",\n  \"pix_tipo_chave\": \"email\",\n  \"pix_chave\": \"financeiro@amarassist.com.br\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Gerar Cobranca - Cartao",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrato_id\": {{contrato_id}},\n  \"competencia\": \"2027-04\",\n  \"tipo\": \"cartao\",\n  \"cartao_bandeira\": \"Visa\",\n  \"cartao_titular\": \"JOANA RIBEIRO\",\n  \"cartao_numero\": \"4111111111111111\",\n  \"cartao_validade\": \"12/2030\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
+              ]
+            },
+            "description": "Não existe campo de CVV: ele não é aceito em nenhuma hipótese. O número é gravado criptografado e a resposta devolve apenas os 4 últimos dígitos."
+          }
+        },
+        {
+          "name": "Gerar - Competencia Duplicada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contrato_id\": {{contrato_id}},\n  \"competencia\": \"2027-02\",\n  \"tipo\": \"boleto\",\n  \"codigo_barras\": \"11111111111111111111111111111111111111111111\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
+              ]
+            },
+            "description": "Retorna 422: o mesmo contrato não pode ter duas cobranças na mesma competência."
+          }
+        },
+        {
+          "name": "Buscar Cobranca",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas/{{cobranca_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas",
+                "{{cobranca_id}}"
+              ]
+            },
+            "description": "Enquanto aberta, os acréscimos são recalculados a cada consulta — repetir a chamada dias depois devolve valor maior."
+          }
+        },
+        {
+          "name": "Registrar Pagamento",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas/{{cobranca_id}}/pagar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas",
+                "{{cobranca_id}}",
+                "pagar"
+              ]
+            },
+            "description": "Congela os acréscimos no valor apurado no dia. A partir daqui a fatura para de crescer e a consulta devolve o valor efetivamente pago."
+          }
+        },
+        {
+          "name": "Pagar - Cobranca Ja Paga",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas/{{cobranca_id}}/pagar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas",
+                "{{cobranca_id}}",
+                "pagar"
+              ]
+            },
+            "description": "Retorna 422."
+          }
+        },
+        {
+          "name": "Remover Cobranca",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uuid\": \"{{cobranca_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas"
               ]
             }
           }
