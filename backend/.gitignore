@@ -16,3 +16,6 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Documentação OpenAPI é gerada pelo l5-swagger
+/storage/api-docs

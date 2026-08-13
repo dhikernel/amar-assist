@@ -1,0 +1,698 @@
+{
+  "info": {
+    "name": "Amar Assist - Sistema de Cobrança",
+    "description": "Collection da API do sistema de cobrança da Amar Assist. As pastas estão na ordem de execução: autentique-se em Auth > Login (o token é guardado automaticamente) e o Encerrar Sessão fica por último, para não revogar o token no meio de uma execução da collection inteira.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{amarassist_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://amar-assist.site"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@amarassist.com.br"
+    },
+    {
+      "key": "admin_password",
+      "value": "Amar@2026"
+    },
+    {
+      "key": "cliente_id",
+      "value": ""
+    },
+    {
+      "key": "cpf",
+      "value": "111.444.777-35"
+    },
+    {
+      "key": "cnpj",
+      "value": "11.222.333/0001-81"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "pm.globals.set(\"amarassist_token\", jsonResponse.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "description": "Autentica e emite um token Bearer com validade de 8 horas. Bloqueia após 5 tentativas malsucedidas, considerando e-mail + IP."
+          }
+        },
+        {
+          "name": "Login - Credenciais Invalidas",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"senha-errada\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "login"
+              ]
+            },
+            "description": "Retorna 422. A mensagem é idêntica para e-mail inexistente e senha errada, para não permitir descobrir quais e-mails existem na base. Após 5 tentativas o retorno passa a ser 429."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "me"
+              ]
+            },
+            "description": "Devolve o usuário autenticado. Usado pelo front para restaurar a sessão a partir de um token guardado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        {
+          "name": "Listar Clientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.data && jsonResponse.data.length > 0) {",
+                  "    pm.globals.set(\"cliente_id\", jsonResponse.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[nome]=&filter[situacao]=&filter[cpf_cnpj]=&sort=nome&per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[nome]",
+                  "value": "",
+                  "description": "Busca parcial, sem diferenciar maiúsculas",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[situacao]",
+                  "value": "",
+                  "description": "ativo ou inativo",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[cpf_cnpj]",
+                  "value": "",
+                  "description": "Com ou sem máscara, aceita busca parcial pelo início",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "nome",
+                  "description": "nome, situacao, created_at (prefixe com - para descendente)"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Listagem paginada. Os três filtros são combináveis. Filtro ou ordenação fora da lista permitida retorna 400."
+          }
+        },
+        {
+          "name": "Listar - Filtrar por Nome",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[nome]=maria",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[nome]",
+                  "value": "maria"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar - Filtrar por Situacao",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[situacao]=inativo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[situacao]",
+                  "value": "inativo",
+                  "description": "ativo ou inativo"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar - Filtrar por CPF/CNPJ com Mascara",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[cpf_cnpj]={{cpf}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[cpf_cnpj]",
+                  "value": "{{cpf}}",
+                  "description": "A máscara é removida antes da consulta, então funciona digitado de qualquer forma"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar - Combinar Filtros",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[nome]=maria&filter[situacao]=ativo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[nome]",
+                  "value": "maria"
+                },
+                {
+                  "key": "filter[situacao]",
+                  "value": "ativo"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar - Filtro Nao Permitido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[cidade]=Campinas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[cidade]",
+                  "value": "Campinas"
+                }
+              ]
+            },
+            "description": "Retorna 400 informando quais filtros são aceitos, em vez de ignorar o parâmetro em silêncio."
+          }
+        },
+        {
+          "name": "Cadastrar Cliente - Pessoa Fisica",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.id) {",
+                  "    pm.globals.set(\"cliente_id\", jsonResponse.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Joana Ribeiro\",\n  \"cpf_cnpj\": \"{{cpf}}\",\n  \"cep\": \"01310-100\",\n  \"logradouro\": \"Avenida Paulista\",\n  \"numero\": \"1578\",\n  \"complemento\": \"Conjunto 12\",\n  \"bairro\": \"Bela Vista\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"email\": \"joana@exemplo.com.br\",\n  \"telefone\": \"(11) 98765-4321\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "O tipo_pessoa é derivado da quantidade de dígitos do documento — não é aceito do cliente. CPF/CNPJ, CEP e telefone podem vir com ou sem máscara; são gravados apenas com dígitos e devolvidos também formatados."
+          }
+        },
+        {
+          "name": "Cadastrar Cliente - Pessoa Juridica",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Amar Assist Servicos Ltda\",\n  \"cpf_cnpj\": \"{{cnpj}}\",\n  \"cep\": \"04538-133\",\n  \"logradouro\": \"Avenida Brigadeiro Faria Lima\",\n  \"numero\": \"3477\",\n  \"bairro\": \"Itaim Bibi\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"email\": \"contato@exemplo.com.br\",\n  \"telefone\": \"1130001000\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "Mesmo endpoint do cadastro PF. Os 14 dígitos do CNPJ fazem o tipo_pessoa ser gravado como PJ."
+          }
+        },
+        {
+          "name": "Cadastrar - CPF Invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Documento Invalido\",\n  \"cpf_cnpj\": \"111.444.777-36\",\n  \"cep\": \"01310-100\",\n  \"logradouro\": \"Avenida Paulista\",\n  \"numero\": \"1578\",\n  \"bairro\": \"Bela Vista\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"telefone\": \"11987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "Retorna 422. A validação confere os dígitos verificadores, não apenas o formato — sequências como 111.111.111-11 também são recusadas."
+          }
+        },
+        {
+          "name": "Cadastrar - CPF Duplicado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Documento Repetido\",\n  \"cpf_cnpj\": \"11144477735\",\n  \"cep\": \"01310-100\",\n  \"logradouro\": \"Avenida Paulista\",\n  \"numero\": \"1578\",\n  \"bairro\": \"Bela Vista\",\n  \"cidade\": \"São Paulo\",\n  \"uf\": \"SP\",\n  \"telefone\": \"11987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "Retorna 422. A checagem de duplicidade compara apenas os dígitos, então o mesmo documento é barrado mesmo digitado sem a máscara usada no cadastro original."
+          }
+        },
+        {
+          "name": "Buscar Cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "{{cliente_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Cliente",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Joana Ribeiro Silva\",\n  \"telefone\": \"(11) 91234-5678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "{{cliente_id}}"
+              ]
+            },
+            "description": "Atualização parcial — envie apenas os campos a alterar. O CPF/CNPJ do próprio registro não é acusado como duplicado."
+          }
+        },
+        {
+          "name": "Verificar Vinculos (check-delete)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}/check-delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "{{cliente_id}}",
+                "check-delete"
+              ]
+            },
+            "description": "Devolve quantos contratos o cliente possui. A tela consulta antes de oferecer a desativação, para não deixar o usuário tentar uma ação que será recusada."
+          }
+        },
+        {
+          "name": "Desativar Cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}/inactive",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "{{cliente_id}}",
+                "inactive"
+              ]
+            },
+            "description": "Diretiva (a) do enunciado: retorna 422 se o cliente possuir contrato vinculado. A situação só muda por aqui e pelo /active — cadastro e atualização não aceitam o campo situacao."
+          }
+        },
+        {
+          "name": "Reativar Cliente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/{{cliente_id}}/active",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "{{cliente_id}}",
+                "active"
+              ]
+            },
+            "description": "Reativação não depende de contrato — a restrição existe apenas para desativar."
+          }
+        },
+        {
+          "name": "Remover Cliente",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uuid\": \"{{cliente_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": "Remoção lógica (soft delete) — o registro é preservado para o histórico de cobrança. O id vai no corpo, no campo uuid. Retorna 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Encerrar Sessao",
+      "item": [
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "logout"
+              ]
+            },
+            "description": "Revoga apenas o token da requisição atual — sessões em outros dispositivos continuam válidas. Fica na última pasta de propósito: executado antes, revogaria o token no meio de uma execução da collection inteira."
+          }
+        }
+      ]
+    }
+  ]
+}
