@@ -8,6 +8,7 @@ use App\Domain\Cliente\Repositories\ClienteRepository;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class ClienteController extends Controller
 {
@@ -55,5 +56,25 @@ class ClienteController extends Controller
     public function destroy(Request $request): JsonResponse
     {
         return parent::destroy($request);
+    }
+
+    public function checkDelete(string $id): JsonResponse
+    {
+        return parent::checkDelete($id);
+    }
+
+    public function inactive(string $id): JsonResponse
+    {
+        return parent::inactive($id);
+    }
+
+    public function active(string $id): JsonResponse
+    {
+        try {
+            return response()->json($this->repository->active($id))
+                ->setStatusCode(Response::HTTP_OK);
+        } catch (\Throwable $exception) {
+            return $this->respostaDeErro($exception);
+        }
     }
 }

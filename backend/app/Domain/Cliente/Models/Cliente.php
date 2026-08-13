@@ -6,11 +6,13 @@ namespace App\Domain\Cliente\Models;
 
 use App\Domain\Cliente\Enums\SituacaoCliente;
 use App\Domain\Cliente\Enums\TipoPessoa;
+use App\Domain\Contrato\Models\Contrato;
 use App\Domain\Shared\Rules\CpfCnpj;
 use Database\Factories\ClienteFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Cliente extends Model
@@ -113,9 +115,19 @@ class Cliente extends Model
         return preg_replace('/(\d{5})(\d{3})/', '$1-$2', (string) $this->cep);
     }
 
+    public function contratos(): HasMany
+    {
+        return $this->hasMany(Contrato::class);
+    }
+
     public function estaAtivo(): bool
     {
         return $this->situacao === SituacaoCliente::Ativo;
+    }
+
+    public function possuiContrato(): bool
+    {
+        return $this->contratos()->exists();
     }
 
     protected static function newFactory(): ClienteFactory

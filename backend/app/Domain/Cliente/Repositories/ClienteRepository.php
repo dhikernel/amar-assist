@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Cliente\Repositories;
 
+use App\Domain\Cliente\Enums\SituacaoCliente;
 use App\Domain\Cliente\Models\Cliente;
 use App\Domain\Cliente\Resources\ClienteCollection;
 use App\Domain\Cliente\Resources\ClienteResource;
@@ -11,6 +12,7 @@ use App\Domain\Shared\Rules\CpfCnpj;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -77,6 +79,44 @@ class ClienteRepository
         try {
             Cliente::findOrFail($id)->delete();
             DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function checkDelete(string $id): int
+    {
+        return Cliente::findOrFail($id)->contratos()->count();
+    }
+
+    public function inactive(string $id): ClienteResource
+    {
+        $cliente = Cliente::findOrFail($id);
+
+        if ($cliente->possuiContrato()) {
+            throw ValidationException::withMessages([
+                'situacao' => ['Cliente com contrato vinculado não pode ser desativado.'],
+            ]);
+        }
+
+        return $this->alterarSituacao($cliente, SituacaoCliente::Inativo);
+    }
+
+    public function active(string $id): ClienteResource
+    {
+        return $this->alterarSituacao(Cliente::findOrFail($id), SituacaoCliente::Ativo);
+    }
+
+    private function alterarSituacao(Cliente $cliente, SituacaoCliente $situacao): ClienteResource
+    {
+        DB::beginTransaction();
+
+        try {
+            $cliente->update(['situacao' => $situacao]);
+            DB::commit();
+
+            return new ClienteResource($cliente->refresh());
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;

@@ -23,4 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/clientes/{id}', [ClienteController::class, 'show']);
     Route::put('/clientes/{id}', [ClienteController::class, 'update']);
     Route::delete('/clientes', [ClienteController::class, 'destroy']);
+    Route::get('/clientes/{id}/check-delete', [ClienteController::class, 'checkDelete']);
+    Route::patch('/clientes/{id}/inactive', [ClienteController::class, 'inactive']);
+    Route::patch('/clientes/{id}/active', [ClienteController::class, 'active']);
 });
