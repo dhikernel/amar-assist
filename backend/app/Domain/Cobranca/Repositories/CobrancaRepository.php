@@ -30,9 +30,15 @@ class CobrancaRepository
                 AllowedFilter::exact('tipo'),
                 AllowedFilter::exact('contrato_id'),
                 AllowedFilter::callback('cliente', $this->filtroPorNomeDoCliente()),
+                AllowedFilter::callback('em_atraso', $this->filtroPorAtraso()),
             )
             ->allowedSorts('data_vencimento', 'valor_total', 'situacao', 'created_at')
-            ->defaultSort('-data_vencimento')
+            ->orderByRaw("FIELD(situacao, 'aberta', 'paga')")
+            ->orderByRaw('CASE WHEN situacao = ? AND data_vencimento < ? THEN 0 ELSE 1 END', [
+                SituacaoCobranca::Aberta->value,
+                Carbon::today()->toDateString(),
+            ])
+            ->orderBy('data_vencimento')
             ->paginate(request('per_page', config('settings.AMOUNT_PAGINATE_DEFAULT')))
             ->appends(request()->query());
 
@@ -110,6 +116,29 @@ class CobrancaRepository
         }
     }
 
+    public function pagar(string $id): CobrancaResource
+    {
+        $cobranca = Cobranca::findOrFail($id);
+
+        $this->garantirQueEstaAberta($cobranca);
+
+        DB::beginTransaction();
+
+        try {
+            $cobranca->aplicarAcrescimos();
+            $cobranca->situacao = SituacaoCobranca::Paga;
+            $cobranca->data_pagamento = now();
+            $cobranca->save();
+
+            DB::commit();
+
+            return new CobrancaResource($cobranca->refresh()->load($this->relationships));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
     private function contratoAtivo(int $contratoId): Contrato
     {
         $contrato = Contrato::findOrFail($contratoId);
@@ -173,6 +202,18 @@ class CobrancaRepository
                 'contrato.cliente',
                 fn (Builder $cliente) => $cliente->where('nome', 'like', '%'.$valor.'%')
             );
+        };
+    }
+
+    private function filtroPorAtraso(): callable
+    {
+        return function (Builder $query, mixed $valor): void {
+            if (! filter_var($valor, FILTER_VALIDATE_BOOLEAN)) {
+                return;
+            }
+
+            $query->where('situacao', SituacaoCobranca::Aberta->value)
+                ->whereDate('data_vencimento', '<', Carbon::today()->toDateString());
         };
     }
 }

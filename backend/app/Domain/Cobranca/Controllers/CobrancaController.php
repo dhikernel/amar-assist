@@ -8,6 +8,7 @@ use App\Domain\Cobranca\Repositories\CobrancaRepository;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CobrancaController extends Controller
 {
@@ -60,5 +61,15 @@ class CobrancaController extends Controller
     public function destroy(Request $request): JsonResponse
     {
         return parent::destroy($request);
+    }
+
+    public function pagar(string $id): JsonResponse
+    {
+        try {
+            return response()->json($this->repository->pagar($id))
+                ->setStatusCode(Response::HTTP_OK);
+        } catch (\Throwable $exception) {
+            return $this->respostaDeErro($exception);
+        }
     }
 }

@@ -43,4 +43,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/cobrancas/{id}', [CobrancaController::class, 'show']);
     Route::put('/cobrancas/{id}', [CobrancaController::class, 'update']);
     Route::delete('/cobrancas', [CobrancaController::class, 'destroy']);
+    Route::patch('/cobrancas/{id}/pagar', [CobrancaController::class, 'pagar']);
 });

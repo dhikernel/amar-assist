@@ -10,7 +10,14 @@ class CobrancaResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $acrescimos = $this->calcularAcrescimos();
+        $acrescimos = $this->estaPaga()
+            ? [
+                'dias_atraso' => $this->dias_atraso,
+                'valor_multa' => $this->valor_multa,
+                'valor_juros' => $this->valor_juros,
+                'valor_total' => $this->valor_total,
+            ]
+            : $this->calcularAcrescimos();
 
         return [
             'id' => $this->id,
