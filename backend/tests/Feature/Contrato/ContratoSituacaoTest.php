@@ -138,4 +138,26 @@ class ContratoSituacaoTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors('situacao');
     }
+
+    public function test_check_delete_conta_as_cobrancas_do_contrato(): void
+    {
+        $contrato = Contrato::factory()->create();
+
+        $this->getJson("/api/contratos/{$contrato->id}/check-delete")
+            ->assertOk()
+            ->assertJsonPath('count', 0)
+            ->assertJsonPath('haveRelationship', false);
+
+        foreach (['2027-01-01', '2027-02-01'] as $competencia) {
+            \App\Domain\Cobranca\Models\Cobranca::factory()->create([
+                'contrato_id' => $contrato->id,
+                'competencia' => $competencia,
+            ]);
+        }
+
+        $this->getJson("/api/contratos/{$contrato->id}/check-delete")
+            ->assertOk()
+            ->assertJsonPath('count', 2)
+            ->assertJsonPath('haveRelationship', true);
+    }
 }

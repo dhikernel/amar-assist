@@ -95,6 +95,11 @@ class ContratoRepository
         }
     }
 
+    public function checkDelete(string $id): int
+    {
+        return Contrato::findOrFail($id)->cobrancas()->count();
+    }
+
     public function suspender(string $id): ContratoResource
     {
         $contrato = Contrato::findOrFail($id);

@@ -83,6 +83,36 @@ use OpenApi\Annotations as OA;
  * )
  *
  * @OA\Schema(
+ *   schema="Cobranca",
+ *   type="object",
+ *
+ *   @OA\Property(property="id", type="integer", example=1),
+ *   @OA\Property(property="competencia", type="string", example="2027-02", description="Mês de referência da fatura"),
+ *   @OA\Property(property="tipo", type="string", enum={"boleto","cartao","pix"}, example="boleto"),
+ *   @OA\Property(property="tipo_rotulo", type="string", example="Boleto"),
+ *   @OA\Property(property="data_vencimento", type="string", format="date", example="2027-02-28", description="Resolvido pelo ciclo do contrato, conforme a diretiva (b)"),
+ *   @OA\Property(property="dias_atraso", type="integer", example=10),
+ *   @OA\Property(property="em_atraso", type="boolean", example=true),
+ *   @OA\Property(property="valor_original", type="string", example="100.00"),
+ *   @OA\Property(property="valor_multa", type="string", example="2.00", description="Percentual fixo sobre o principal, aplicado uma vez quando há atraso"),
+ *   @OA\Property(property="valor_juros", type="string", example="10.00", description="Diretiva (c): 1% ao dia sobre o principal, por dia de atraso"),
+ *   @OA\Property(property="valor_total", type="string", example="112.00", description="Recalculado a cada consulta enquanto aberta; congelado no valor pago após a quitação"),
+ *   @OA\Property(property="situacao", type="string", enum={"aberta","paga"}, example="aberta"),
+ *   @OA\Property(property="situacao_rotulo", type="string", example="Aberta"),
+ *   @OA\Property(property="data_pagamento", type="string", format="date-time", nullable=true),
+ *   @OA\Property(property="contrato", type="object",
+ *     @OA\Property(property="id", type="integer"),
+ *     @OA\Property(property="numero", type="string", example="CT-000123"),
+ *     @OA\Property(property="cliente", type="object",
+ *       @OA\Property(property="id", type="integer"),
+ *       @OA\Property(property="nome", type="string", example="Joana Ribeiro")
+ *     )
+ *   ),
+ *   @OA\Property(property="detalhe", type="object", description="Campos conforme o tipo: boleto devolve codigo_barras e linha_digitavel; cartao devolve bandeira, titular, ultimos_digitos e validade — nunca o número completo; pix devolve tipo_chave e chave"),
+ *   @OA\Property(property="criado_em", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
  *   schema="MessageResponse",
  *   type="object",
  *
