@@ -32,6 +32,10 @@
       "value": ""
     },
     {
+      "key": "contrato_id",
+      "value": ""
+    },
+    {
       "key": "cpf",
       "value": "111.444.777-35"
     },
@@ -662,6 +666,446 @@
               ]
             },
             "description": "Remoção lógica (soft delete) — o registro é preservado para o histórico de cobrança. O id vai no corpo, no campo uuid. Retorna 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contratos",
+      "item": [
+        {
+          "name": "Selecionar Cliente Ativo",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.data && jsonResponse.data.length > 0) {",
+                  "    pm.globals.set(\"cliente_id\", jsonResponse.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/clientes?filter[situacao]=ativo&per_page=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ],
+              "query": [
+                {
+                  "key": "filter[situacao]",
+                  "value": "ativo"
+                },
+                {
+                  "key": "per_page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Guarda um cliente ativo em cliente_id para os cadastros seguintes. Necessário porque a pasta Clientes termina removendo o cliente que ela havia capturado, e contrato exige cliente ativo."
+          }
+        },
+        {
+          "name": "Listar Contratos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.data && jsonResponse.data.length > 0) {",
+                  "    pm.globals.set(\"contrato_id\", jsonResponse.data[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos?filter[numero]=&filter[situacao]=&filter[tipo]=&filter[cliente]=&sort=-data_inicio&per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ],
+              "query": [
+                {
+                  "key": "filter[numero]",
+                  "value": "",
+                  "description": "Busca parcial pelo número",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[situacao]",
+                  "value": "",
+                  "description": "ativo, suspenso ou encerrado",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[tipo]",
+                  "value": "",
+                  "description": "PF ou PJ",
+                  "disabled": true
+                },
+                {
+                  "key": "filter[cliente]",
+                  "value": "",
+                  "description": "Busca parcial pelo nome do cliente",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "-data_inicio",
+                  "description": "numero, data_inicio, valor_mensal, situacao, created_at"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Cada item traz proximo_vencimento já resolvido pela diretiva (b) — o ciclo limitado ao último dia do mês corrente."
+          }
+        },
+        {
+          "name": "Listar - Filtrar por Situacao",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos?filter[situacao]=ativo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ],
+              "query": [
+                {
+                  "key": "filter[situacao]",
+                  "value": "ativo"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Listar - Filtrar pelo Nome do Cliente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos?filter[cliente]=silva",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ],
+              "query": [
+                {
+                  "key": "filter[cliente]",
+                  "value": "silva",
+                  "description": "Filtra pela relação, não por coluna do contrato"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cadastrar Contrato - Ciclo 31",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jsonResponse = pm.response.json();",
+                  "if (jsonResponse.id) {",
+                  "    pm.globals.set(\"contrato_id\", jsonResponse.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"numero\": \"CT-POSTMAN-01\",\n  \"ciclo\": 31,\n  \"valor_mensal\": 249.90,\n  \"data_inicio\": \"2027-01-05\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/contratos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ]
+            },
+            "description": "Ciclo 31 de propósito: confira o proximo_vencimento na resposta. Em fevereiro devolve dia 28 (ou 29 em ano bissexto), em abril devolve 30. O tipo (PF/PJ) é derivado do documento do cliente e ignorado se enviado."
+          }
+        },
+        {
+          "name": "Cadastrar - Ciclo Invalido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cliente_id\": {{cliente_id}},\n  \"numero\": \"CT-CICLO-INVALIDO\",\n  \"ciclo\": 32,\n  \"valor_mensal\": 100.00,\n  \"data_inicio\": \"2027-01-05\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/contratos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ]
+            },
+            "description": "Retorna 422. O ciclo é o dia do mês, então precisa estar entre 1 e 31."
+          }
+        },
+        {
+          "name": "Buscar Contrato",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos/{{contrato_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "{{contrato_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Contrato",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ciclo\": 20,\n  \"valor_mensal\": 299.90\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/contratos/{{contrato_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "{{contrato_id}}"
+              ]
+            },
+            "description": "Atualização parcial. A situação não é aceita aqui — use suspender, reativar ou encerrar."
+          }
+        },
+        {
+          "name": "Suspender Contrato",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos/{{contrato_id}}/suspender",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "{{contrato_id}}",
+                "suspender"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reativar Contrato",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos/{{contrato_id}}/reativar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "{{contrato_id}}",
+                "reativar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Encerrar Contrato",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos/{{contrato_id}}/encerrar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "{{contrato_id}}",
+                "encerrar"
+              ]
+            },
+            "description": "Grava data_fim com a data corrente. Estado terminal — repetir devolve 422, e suspender ou reativar depois também."
+          }
+        },
+        {
+          "name": "Encerrar - Contrato Ja Encerrado",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/contratos/{{contrato_id}}/encerrar",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos",
+                "{{contrato_id}}",
+                "encerrar"
+              ]
+            },
+            "description": "Retorna 422: encerrado é estado terminal."
+          }
+        },
+        {
+          "name": "Remover Contrato",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uuid\": \"{{contrato_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/contratos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "contratos"
+              ]
+            }
           }
         }
       ]

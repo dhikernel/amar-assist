@@ -59,6 +59,30 @@ use OpenApi\Annotations as OA;
  * )
  *
  * @OA\Schema(
+ *   schema="Contrato",
+ *   type="object",
+ *
+ *   @OA\Property(property="id", type="integer", example=1),
+ *   @OA\Property(property="numero", type="string", example="CT-000123"),
+ *   @OA\Property(property="tipo", type="string", enum={"PF","PJ"}, example="PF", description="Derivado do documento do cliente vinculado"),
+ *   @OA\Property(property="tipo_rotulo", type="string", example="Pessoa Física"),
+ *   @OA\Property(property="cliente", type="object",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="nome", type="string", example="Joana Ribeiro"),
+ *     @OA\Property(property="cpf_cnpj_formatado", type="string", example="111.444.777-35")
+ *   ),
+ *   @OA\Property(property="ciclo", type="integer", minimum=1, maximum=31, example=31, description="Dia do mês pretendido para o vencimento"),
+ *   @OA\Property(property="proximo_vencimento", type="string", format="date", example="2027-02-28", description="Ciclo resolvido para o mês corrente, limitado ao último dia disponível — ciclo 31 vence em 28/02, ou 29/02 em ano bissexto"),
+ *   @OA\Property(property="valor_mensal", type="string", example="249.90"),
+ *   @OA\Property(property="data_inicio", type="string", format="date", example="2027-01-05"),
+ *   @OA\Property(property="data_fim", type="string", format="date", nullable=true),
+ *   @OA\Property(property="situacao", type="string", enum={"ativo","suspenso","encerrado"}, example="ativo"),
+ *   @OA\Property(property="situacao_rotulo", type="string", example="Ativo"),
+ *   @OA\Property(property="criado_em", type="string", format="date-time"),
+ *   @OA\Property(property="atualizado_em", type="string", format="date-time")
+ * )
+ *
+ * @OA\Schema(
  *   schema="MessageResponse",
  *   type="object",
  *
