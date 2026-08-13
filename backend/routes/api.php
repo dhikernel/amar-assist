@@ -33,4 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/contratos/{id}', [ContratoController::class, 'show']);
     Route::put('/contratos/{id}', [ContratoController::class, 'update']);
     Route::delete('/contratos', [ContratoController::class, 'destroy']);
+    Route::patch('/contratos/{id}/suspender', [ContratoController::class, 'suspender']);
+    Route::patch('/contratos/{id}/reativar', [ContratoController::class, 'reativar']);
+    Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
 });

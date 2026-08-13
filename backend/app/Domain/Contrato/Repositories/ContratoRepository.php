@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Contrato\Repositories;
 
 use App\Domain\Cliente\Models\Cliente;
+use App\Domain\Contrato\Enums\SituacaoContrato;
 use App\Domain\Contrato\Models\Contrato;
 use App\Domain\Contrato\Resources\ContratoCollection;
 use App\Domain\Contrato\Resources\ContratoResource;
@@ -88,6 +89,69 @@ class ContratoRepository
         try {
             Contrato::findOrFail($id)->delete();
             DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+
+    public function suspender(string $id): ContratoResource
+    {
+        $contrato = Contrato::findOrFail($id);
+
+        if ($contrato->estaEncerrado()) {
+            throw ValidationException::withMessages([
+                'situacao' => ['Contrato encerrado não pode ser suspenso.'],
+            ]);
+        }
+
+        return $this->alterarSituacao($contrato, SituacaoContrato::Suspenso);
+    }
+
+    public function reativar(string $id): ContratoResource
+    {
+        $contrato = Contrato::findOrFail($id);
+
+        if ($contrato->estaEncerrado()) {
+            throw ValidationException::withMessages([
+                'situacao' => ['Contrato encerrado não pode ser reativado.'],
+            ]);
+        }
+
+        return $this->alterarSituacao($contrato, SituacaoContrato::Ativo);
+    }
+
+    public function encerrar(string $id): ContratoResource
+    {
+        $contrato = Contrato::findOrFail($id);
+
+        if ($contrato->estaEncerrado()) {
+            throw ValidationException::withMessages([
+                'situacao' => ['Contrato já está encerrado.'],
+            ]);
+        }
+
+        return $this->alterarSituacao($contrato, SituacaoContrato::Encerrado, now()->toDateString());
+    }
+
+    private function alterarSituacao(
+        Contrato $contrato,
+        SituacaoContrato $situacao,
+        ?string $dataFim = null
+    ): ContratoResource {
+        DB::beginTransaction();
+
+        try {
+            $contrato->situacao = $situacao;
+
+            if ($dataFim !== null) {
+                $contrato->data_fim = $dataFim;
+            }
+
+            $contrato->save();
+            DB::commit();
+
+            return new ContratoResource($contrato->refresh()->load($this->relationships));
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
