@@ -72,6 +72,10 @@ class CobrancaController extends Controller
             return $this->respostaDeErro($exception);
         }
     }
+    public function resumo(): JsonResponse
+    {
+        return response()->json($this->repository->resumo());
+    }
 
     public function gerarLote(Request $request): JsonResponse
     {
