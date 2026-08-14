@@ -113,6 +113,18 @@ use OpenApi\Annotations as OA;
  * )
  *
  * @OA\Schema(
+ *   schema="ResumoCobranca",
+ *   type="object",
+ *
+ *   @OA\Property(property="total_em_aberto", type="integer", example=16),
+ *   @OA\Property(property="total_em_atraso", type="integer", example=11),
+ *   @OA\Property(property="total_pagas", type="integer", example=8),
+ *   @OA\Property(property="valor_em_aberto", type="string", example="33831.46"),
+ *   @OA\Property(property="valor_recebido", type="string", example="16915.73"),
+ *   @OA\Property(property="atualizado_em", type="string", format="date-time", description="Momento em que o resumo foi calculado. Fica em cache no Redis por 5 minutos, e o cache é descartado a cada cobrança criada, paga ou removida.")
+ * )
+ *
+ * @OA\Schema(
  *   schema="MessageResponse",
  *   type="object",
  *

@@ -1165,6 +1165,30 @@
           }
         },
         {
+          "name": "Resumo da Carteira",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "description": "Indicadores da tela de cobranca: totais em aberto, em atraso e pagas. Fica em cache no Redis por 5 minutos. Chame duas vezes seguidas e compare o campo atualizado_em: na segunda ele nao muda, porque veio do cache.",
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas/resumo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas",
+                "resumo"
+              ]
+            }
+          }
+        },
+        {
           "name": "Listar Cobrancas",
           "event": [
             {
@@ -1497,6 +1521,62 @@
               "path": [
                 "api",
                 "cobrancas"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Gerar Faturas do Mes em Lote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "description": "Enfileira um job por contrato ativo na fila cobrancas do Redis. Responde 202 na hora, sem esperar a geracao — acompanhe o processamento em /horizon. Reenviar o mesmo lote nao duplica faturas.",
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas/gerar-lote",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas",
+                "gerar-lote"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"competencia\": \"2027-10\",\n  \"tipo\": \"boleto\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Resumo Apos o Lote",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "description": "Rode depois da geracao em lote: os totais mudam mesmo dentro da janela de 5 minutos do cache, porque cada cobranca criada pelo worker descarta o cache automaticamente.",
+            "url": {
+              "raw": "{{base_url}}/api/cobrancas/resumo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "cobrancas",
+                "resumo"
               ]
             }
           }

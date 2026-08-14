@@ -623,5 +623,45 @@ use OpenApi\Annotations as OA;
  *   @OA\Response(response=404, description="Cobrança não encontrada"),
  *   @OA\Response(response=401, description="Não autenticado")
  * )
+ *
+ * ------- COBRANCAS: FILA E CACHE -------
+ *
+ * @OA\Get(
+ *   path="/api/cobrancas/resumo", tags={"Cobrancas"}, summary="Resumo da carteira",
+ *   description="Totais de faturas em aberto, em atraso e pagas, para os indicadores da tela de cobrança. O resultado fica em cache no Redis por 5 minutos e é descartado automaticamente sempre que uma cobrança é criada, paga ou removida — a tela nunca mostra número velho depois de uma alteração.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\Response(response=200, description="Resumo da carteira",
+ *
+ *     @OA\JsonContent(ref="#/components/schemas/ResumoCobranca")
+ *   ),
+ *
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
+ *
+ * @OA\Post(
+ *   path="/api/cobrancas/gerar-lote", tags={"Cobrancas"}, summary="Gera as faturas do mês em lote",
+ *   description="Enfileira um job por contrato ativo na fila cobrancas do Redis, processada pelo Horizon. Responde 202 imediatamente, sem esperar a geração. A operação é idempotente: reenviar o mesmo lote não duplica faturas, porque cada job trata competência já existente como trabalho concluído — o que também torna seguras as retentativas automáticas. Cartão não é aceito, por exigir dados por cliente.",
+ *   security={{"bearer":{}}},
+ *
+ *   @OA\RequestBody(required=true,
+ *
+ *     @OA\MediaType(mediaType="application/json",
+ *
+ *       @OA\Schema(example={"competencia": "2027-09", "tipo": "boleto"})
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=202, description="Geração enfileirada",
+ *
+ *     @OA\JsonContent(type="object",
+ *       @OA\Property(property="mensagem", type="string", example="Geração enfileirada."),
+ *       @OA\Property(property="contratos_enfileirados", type="integer", example=8)
+ *     )
+ *   ),
+ *
+ *   @OA\Response(response=422, description="Competência inválida ou tipo não suportado em lote"),
+ *   @OA\Response(response=401, description="Não autenticado")
+ * )
  */
 class Annotations {}
