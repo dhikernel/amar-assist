@@ -15,9 +15,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class Cobranca extends Model
 {
+    public const CHAVE_RESUMO = 'cobrancas:resumo';
+
     use HasFactory;
     use SoftDeletes;
 
@@ -50,6 +53,14 @@ class Cobranca extends Model
         'valor_juros' => 0,
         'dias_atraso' => 0,
     ];
+
+    protected static function booted(): void
+    {
+        $esquecerResumo = static fn () => Cache::forget(self::CHAVE_RESUMO);
+
+        static::saved($esquecerResumo);
+        static::deleted($esquecerResumo);
+    }
 
     public function contrato(): BelongsTo
     {

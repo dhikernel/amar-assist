@@ -13,6 +13,9 @@ use App\Domain\Contrato\Models\Contrato;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use App\Domain\Cobranca\Jobs\GerarCobrancaDoContrato;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -137,6 +140,47 @@ class CobrancaRepository
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function gerarEmLote(string $competencia, string $tipo): int
+    {
+        $contratos = Contrato::where('situacao', 'ativo')->pluck('id');
+
+        Bus::batch(
+            $contratos->map(fn (int $id) => new GerarCobrancaDoContrato($id, $competencia, $tipo))->all()
+        )->name('cobrancas '.$competencia)->onQueue('cobrancas')->dispatch();
+
+        return $contratos->count();
+    }
+
+    public function resumo(): array
+    {
+        return Cache::remember(
+            Cobranca::CHAVE_RESUMO,
+            (int) config('settings.RESUMO_CACHE_SEGUNDOS'),
+            fn () => $this->calcularResumo()
+        );
+    }
+
+    public function esquecerResumo(): void
+    {
+        Cache::forget(Cobranca::CHAVE_RESUMO);
+    }
+
+    private function calcularResumo(): array
+    {
+        $hoje = Carbon::today()->toDateString();
+
+        $abertas = Cobranca::where('situacao', SituacaoCobranca::Aberta->value);
+
+        return [
+            'total_em_aberto' => (clone $abertas)->count(),
+            'total_em_atraso' => (clone $abertas)->whereDate('data_vencimento', '<', $hoje)->count(),
+            'total_pagas' => Cobranca::where('situacao', SituacaoCobranca::Paga->value)->count(),
+            'valor_em_aberto' => (string) ((clone $abertas)->sum('valor_original') ?: '0.00'),
+            'valor_recebido' => (string) (Cobranca::where('situacao', SituacaoCobranca::Paga->value)->sum('valor_total') ?: '0.00'),
+            'atualizado_em' => now()->toIso8601String(),
+        ];
     }
 
     private function contratoAtivo(int $contratoId): Contrato
