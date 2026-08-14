@@ -29,9 +29,12 @@ cd amar-assist
 cp .env.example .env
 cp backend/.env.example backend/.env
 
+# As dependências são instaladas antes de subir a stack: o worker de filas
+# executa o artisan e reiniciaria em ciclo até encontrar o vendor/.
+docker compose run --rm --no-deps app composer install
+
 docker compose up -d --build
 
-docker compose exec app composer install
 docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate --seed
 ```
@@ -78,6 +81,16 @@ mkcert -install
 
 Sem esses passos o projeto funciona normalmente em `localhost:8000` — o
 domínio é conveniência, não requisito.
+
+O certificado em `docker/nginx/certs/` está versionado por decisão consciente,
+e não por descuido: ele vale apenas para `amar-assist.site`, nome que só
+resolve via arquivo `hosts` apontando para `127.0.0.1`, e é assinado por uma
+autoridade local cuja chave permanece fora do repositório. Sem ele no
+repositório o nginx não inicia, e a falha derrubaria junto o acesso por
+`localhost:8000`. Em produção o certificado viria de uma autoridade pública e
+a chave jamais entraria no controle de versão.
+
+Para regenerá-lo: `./docker/nginx/certs/gerar-certificados.sh`
 
 ## Testes
 
