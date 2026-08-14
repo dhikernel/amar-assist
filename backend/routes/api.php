@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/contratos/{id}/reativar', [ContratoController::class, 'reativar']);
     Route::patch('/contratos/{id}/encerrar', [ContratoController::class, 'encerrar']);
 
+    Route::post('/cobrancas/gerar-lote', [CobrancaController::class, 'gerarLote']);
     Route::get('/cobrancas', [CobrancaController::class, 'index']);
     Route::post('/cobrancas', [CobrancaController::class, 'store']);
     Route::get('/cobrancas/{id}', [CobrancaController::class, 'show']);

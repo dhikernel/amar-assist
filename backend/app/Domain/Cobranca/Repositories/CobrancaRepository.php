@@ -13,6 +13,8 @@ use App\Domain\Contrato\Models\Contrato;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use App\Domain\Cobranca\Jobs\GerarCobrancaDoContrato;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -137,6 +139,17 @@ class CobrancaRepository
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function gerarEmLote(string $competencia, string $tipo): int
+    {
+        $contratos = Contrato::where('situacao', 'ativo')->pluck('id');
+
+        Bus::batch(
+            $contratos->map(fn (int $id) => new GerarCobrancaDoContrato($id, $competencia, $tipo))->all()
+        )->name('cobrancas '.$competencia)->onQueue('cobrancas')->dispatch();
+
+        return $contratos->count();
     }
 
     private function contratoAtivo(int $contratoId): Contrato

@@ -72,4 +72,19 @@ class CobrancaController extends Controller
             return $this->respostaDeErro($exception);
         }
     }
+
+    public function gerarLote(Request $request): JsonResponse
+    {
+        $dados = $request->validate([
+            'competencia' => 'required|date_format:Y-m',
+            'tipo' => 'required|in:boleto,pix',
+        ]);
+
+        $total = $this->repository->gerarEmLote($dados['competencia'], $dados['tipo']);
+
+        return response()->json([
+            'mensagem' => 'Geração enfileirada.',
+            'contratos_enfileirados' => $total,
+        ], Response::HTTP_ACCEPTED);
+    }
 }
