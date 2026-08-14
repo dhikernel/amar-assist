@@ -79,6 +79,16 @@ mkcert -install
 Sem esses passos o projeto funciona normalmente em `localhost:8000` — o
 domínio é conveniência, não requisito.
 
+O certificado em `docker/nginx/certs/` está versionado por decisão consciente,
+e não por descuido: ele vale apenas para `amar-assist.site`, nome que só
+resolve via arquivo `hosts` apontando para `127.0.0.1`, e é assinado por uma
+autoridade local cuja chave permanece fora do repositório. Sem ele no
+repositório o nginx não inicia, e a falha derrubaria junto o acesso por
+`localhost:8000`. Em produção o certificado viria de uma autoridade pública e
+a chave jamais entraria no controle de versão.
+
+Para regenerá-lo: `./docker/nginx/certs/gerar-certificados.sh`
+
 ## Testes
 
 ```bash
